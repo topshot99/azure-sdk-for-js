@@ -288,4 +288,15 @@ export class Container {
     this.clientContext.partitionKeyRangesCache[this.url] = partitionKeyRanges;
     return new ResourceResponse<PartitionKeyRange[]>(partitionKeyRanges, {}, 0);
   }
+
+  /**
+   * This function is used to reset the partition key ranges cache for the given collection.
+   * @hidden
+   */
+  public async resetPartitionKeyRangesCache(): Promise<void> {
+    if (this.url in this.clientContext.partitionKeyRangesCache) {
+      delete this.clientContext.partitionKeyRangesCache[this.url];
+    }
+    this.getPartitionKeyRanges();
+  }
 }

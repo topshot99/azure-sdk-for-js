@@ -557,3 +557,27 @@ describe("container.getPartitionKeyRanges", function () {
     assert.equal(ranges2.resource.length, 2);
   });
 });
+
+describe("container.resetPartitionKeyRangesCache", function () {
+  let container: Container;
+
+  before(async function () {
+    container = await getTestContainer("container", undefined, {
+      partitionKey: {
+        paths: ["/pk"],
+        version: 2,
+      },
+      throughput: 10500,
+    });
+  });
+
+  it("should reset partition key ranges cache", async function () {
+    // Get the partition key ranges from the database
+    const ranges = await container.getPartitionKeyRanges();
+    assert.equal(ranges.resource.length, 2);
+    // Reset the cache
+    //TODO: DO some thing so that container PK ranges change
+    container.resetPartitionKeyRangesCache();
+    assert.equal(ranges.resource.length, 2);
+  });
+});
