@@ -44,6 +44,7 @@ export class ClientContext {
   private connectionPolicy: ConnectionPolicy;
   private pipeline: Pipeline;
   public partitionKeyDefinitionCache: { [containerUrl: string]: any }; // TODO: PartitionKeyDefinitionCache
+  public partitionKeyRangesCache: { [containerUrl: string]: PartitionKeyRange[] };
   public constructor(
     private cosmosClientOptions: CosmosClientOptions,
     private globalEndpointManager: GlobalEndpointManager
@@ -51,6 +52,7 @@ export class ClientContext {
     this.connectionPolicy = cosmosClientOptions.connectionPolicy;
     this.sessionContainer = new SessionContainer();
     this.partitionKeyDefinitionCache = {};
+    this.partitionKeyRangesCache = {};
     this.pipeline = null;
     if (cosmosClientOptions.aadCredentials) {
       this.pipeline = createEmptyPipeline();

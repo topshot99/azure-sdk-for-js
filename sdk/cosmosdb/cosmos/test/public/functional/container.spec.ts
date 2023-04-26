@@ -525,3 +525,35 @@ describe("container.deleteAllItemsForPartitionKey", function () {
     assert((await (await container.item(create3.id).read()).item.id) === create3.id);
   }
 });
+
+describe("container.getPartitionKeyRanges", function () {
+  let container: Container;
+  before(async function () {
+    container = await getTestContainer("container", undefined, {
+      partitionKey: {
+        paths: ["/pk"],
+        version: 2,
+      },
+      throughput: 10500,
+    });
+  });
+
+  it("should get partition key ranges", async function () {
+    // Get the partition key ranges from the database
+    const startTimeDb = Date.now();
+    const ranges = await container.getPartitionKeyRanges();
+    const endTimeDb = Date.now();
+    const timeElapsedDb = endTimeDb - startTimeDb;
+    assert.equal(ranges.resource.length, 2);
+
+    // Get the partition key ranges from the cache
+    const startTimeCache = Date.now();
+    const ranges2 = await container.getPartitionKeyRanges();
+    const endTimeCache = Date.now();
+    const timeElapsedCache = endTimeCache - startTimeCache;
+
+    // Check that time to get from cache is less than time to get from database
+    assert(timeElapsedCache < timeElapsedDb);
+    assert.equal(ranges2.resource.length, 2);
+  });
+});

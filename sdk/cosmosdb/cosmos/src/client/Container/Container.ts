@@ -263,4 +263,29 @@ export class Container {
     });
     return new ContainerResponse(response.result, response.headers, response.code, this);
   }
+
+  /**
+   * Read the partition key ranges for the collection.
+   * If the partition key ranges for this collection are already cached, return them.
+   * Otherwise, read them from the backend and cache them.
+   * @returns PartitionKeyRange[]
+   */
+  public async getPartitionKeyRanges(
+    feedOptions?: FeedOptions
+  ): Promise<ResourceResponse<PartitionKeyRange[]>> {
+    if (this.url in this.clientContext.partitionKeyRangesCache) {
+      return new ResourceResponse<PartitionKeyRange[]>(
+        this.clientContext.partitionKeyRangesCache[this.url],
+        {},
+        0
+      );
+    }
+
+    const { resources: partitionKeyRanges } = await this.readPartitionKeyRanges(
+      feedOptions
+    ).fetchAll();
+
+    this.clientContext.partitionKeyRangesCache[this.url] = partitionKeyRanges;
+    return new ResourceResponse<PartitionKeyRange[]>(partitionKeyRanges, {}, 0);
+  }
 }
