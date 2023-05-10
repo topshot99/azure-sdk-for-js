@@ -9,6 +9,9 @@ import { PatchRequestBody } from "./patch";
 import { v4 } from "uuid";
 import { bodyFromData } from "../request/request";
 import { Constants } from "../common/constants";
+import { hashV1PartitionKey } from "./hashing/v1";
+import { hashV2PartitionKey } from "./hashing/v2";
+import {PartitionKeyRange } from "../client/Container"
 const uuid = v4;
 
 export type Operation =
@@ -293,4 +296,83 @@ export function deepFind<T, P extends string>(document: T, path: P): string | JS
     }
   }
   return h;
+}
+
+export function updateBatches(
+  batches: Batch[],
+  rangeToOverlappingIntervals: Map<string, PartitionKeyRange[]>,
+  definition: PartitionKeyDefinition
+) {
+  const newBatches: Batch[] = [];
+  batches.forEach((batch: Batch) => {
+    const overlappingIntervals = rangeToOverlappingIntervals.get(batch.rangeId);
+    if (overlappingIntervals.length === 1) {
+      if (
+        batch.min === overlappingIntervals[0].minInclusive &&
+        batch.max === overlappingIntervals[0].maxExclusive
+      ) {
+        batch.rangeId = overlappingIntervals[0].id;
+      } else {
+        const newBatch: Batch = {
+          min: overlappingIntervals[0].minInclusive,
+          max: overlappingIntervals[0].maxExclusive,
+          rangeId: overlappingIntervals[0].id,
+          indexes: batch.indexes,
+          operations: batch.operations,
+        };
+        newBatches.push(newBatch);
+        batches.push(...newBatches);
+      }
+    } else if (overlappingIntervals.length > 1) {
+      // Split the batch into multiple batches based on the overlapping intervals.
+      overlappingIntervals.forEach((interval: PartitionKeyRange) => {
+        const newBatch: Batch = {
+          min: interval.minInclusive,
+          max: interval.maxExclusive,
+          rangeId: interval.id,
+          indexes: [],
+          operations: [],
+        };
+        newBatches.push(newBatch);
+      });
+
+      const partitionProp = definition.paths[0].replace("/", "");
+      const isV2 = definition.version && definition.version === 2;
+
+      // Reassign operations to new batches.
+      batch.operations.forEach((operation, index) => {
+        const toHashKey = getPartitionKeyToHash(operation, partitionProp);
+        const hashed = isV2 ? hashV2PartitionKey(toHashKey) : hashV1PartitionKey(toHashKey);
+        const batchForKey = newBatches.find((batch: Batch) =>
+          isKeyInRange(batch.min, batch.max, hashed)
+        );
+        batchForKey.operations.push(operation);
+        batchForKey.indexes.push(batch.indexes[index]);
+      });
+      batches.push(...newBatches);
+    }
+  });
+}
+
+export function findOverlappingIntervals(
+  initialList: PartitionKeyRange[],
+  updatedList: PartitionKeyRange[]
+): Map<string, PartitionKeyRange[]> {
+  // sort updated list by minInclusive
+  const sortedUpdatedList = updatedList.sort((a: PartitionKeyRange, b: PartitionKeyRange) =>
+    a.minInclusive.localeCompare(b.minInclusive)
+  );
+
+  return initialList.reduce(
+    (result: Map<string, PartitionKeyRange[]>, initial: PartitionKeyRange) => {
+      const overlaps = sortedUpdatedList.filter(
+        (updated: PartitionKeyRange) =>
+          updated.maxExclusive >= initial.minInclusive &&
+          updated.minInclusive <= initial.maxExclusive
+      );
+      result.set(initial.id, overlaps);
+      return result;
+    },
+    new Map<string, PartitionKeyRange[]>()
+  );
 }

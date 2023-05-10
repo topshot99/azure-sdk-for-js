@@ -5,7 +5,13 @@ const uuid = v4;
 import { ChangeFeedIterator } from "../../ChangeFeedIterator";
 import { ChangeFeedOptions } from "../../ChangeFeedOptions";
 import { ClientContext } from "../../ClientContext";
-import { getIdFromLink, getPathFromLink, isItemResourceValid, ResourceType } from "../../common";
+import {
+  getIdFromLink,
+  getPathFromLink,
+  isItemResourceValid,
+  ResourceType,
+  SubStatusCodes,
+} from "../../common";
 import { extractPartitionKey } from "../../extractPartitionKey";
 import { FetchFunctionCallback, SqlQuerySpec } from "../../queryExecutionContext";
 import { QueryIterator } from "../../queryIterator";
@@ -25,9 +31,13 @@ import {
   BulkOptions,
   decorateBatchOperation,
   splitBatchBasedOnBodySize,
+  updateBatches,
+  findOverlappingIntervals,
+
 } from "../../utils/batch";
 import { hashV1PartitionKey } from "../../utils/hashing/v1";
 import { hashV2PartitionKey } from "../../utils/hashing/v2";
+import { PartitionKeyDefinition } from "../../documents";
 
 /**
  * @hidden
@@ -406,9 +416,7 @@ export class Items {
     bulkOptions?: BulkOptions,
     options?: RequestOptions
   ): Promise<OperationResponse[]> {
-    const { resources: partitionKeyRanges } = await this.container
-      .readPartitionKeyRanges()
-      .fetchAll();
+    const partitionKeyRanges = (await this.container.getPartitionKeyRanges()).resource;
     const { resource: definition } = await this.container.getPartitionKeyDefinition();
     const batches: Batch[] = partitionKeyRanges.map((keyRange: PartitionKeyRange) => {
       return {
@@ -444,34 +452,69 @@ export class Items {
           if (batch.operations.length > 100) {
             throw new Error("Cannot run bulk request with more than 100 operations per partition");
           }
-          try {
-            const response = await this.clientContext.bulk({
-              body: batch.operations,
-              partitionKeyRangeId: batch.rangeId,
-              path,
-              resourceId: this.container.url,
-              bulkOptions,
-              options,
-            });
-            response.result.forEach((operationResponse: OperationResponse, index: number) => {
-              orderedResponses[batch.indexes[index]] = operationResponse;
-            });
-          } catch (err: any) {
-            // In the case of 410 errors, we need to recompute the partition key ranges
-            // and redo the batch request, however, 410 errors occur for unsupported
-            // partition key types as well since we don't support them, so for now we throw
-            if (err.code === 410) {
-              throw new Error(
-                "Partition key error. Either the partitions have split or an operation has an unsupported partitionKey type"
-              );
+          let shouldRetry = true;
+          while (shouldRetry) {
+            try {
+              shouldRetry = false;
+              const response = await this.clientContext.bulk({
+                body: batch.operations,
+                partitionKeyRangeId: batch.rangeId,
+                path,
+                resourceId: this.container.url,
+                bulkOptions,
+                options,
+              });
+              response.result.forEach((operationResponse: OperationResponse, index: number) => {
+                orderedResponses[batch.indexes[index]] = operationResponse;
+              });
+            } catch (err: any) {
+              // In the case of 410 errors, we need to recompute the partition key ranges
+              // and redo the batch request, however, 410 errors occur for unsupported
+              // partition key types as well since we don't support them, so for now we throw
+              if (err.code === 410) {
+                if (
+                  err.substatus === SubStatusCodes.PartitionKeyRangeGone ||
+                  err.substatus === SubStatusCodes.CompletingSplit ||
+                  err.substatus === SubStatusCodes.CompletingPartitionMigration
+                ) {
+                  await this.handlePartitionSplitForBulkOperations(
+                    partitionKeyRanges,
+                    batches,
+                    definition
+                  );
+                  shouldRetry = true;
+                }
+                throw new Error(
+                  "Partition key error. Either the partitions have split or an operation has an unsupported partitionKey type"
+                );
+              }
+              throw new Error(`Bulk request errored with: ${err.message}`);
             }
-            throw new Error(`Bulk request errored with: ${err.message}`);
           }
         })
     );
     return orderedResponses;
   }
 
+  private async handlePartitionSplitForBulkOperations(
+    partitionKeyRanges: PartitionKeyRange[],
+    batches: Batch[],
+    definition: PartitionKeyDefinition
+  ) {
+    await this.container.resetPartitionKeyRangesCache();
+
+    // Get the updated partition key ranges after reset.
+    const updatedPartitionKeyRanges = (await this.container.getPartitionKeyRanges()).resource;
+
+    // Find overlapping intervals and maintain mapping of old to new partition.
+    const rangeToOverlappingIntervals = findOverlappingIntervals(
+      partitionKeyRanges,
+      updatedPartitionKeyRanges
+    );
+
+    // Update batches with respect to new partition key ranges.
+    updateBatches(batches, rangeToOverlappingIntervals, definition);
+  }
   /**
    * Execute transactional batch operations on items.
    *
