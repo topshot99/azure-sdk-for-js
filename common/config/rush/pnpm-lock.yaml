@@ -989,6 +989,9 @@ dependencies:
   '@rush-temp/perf-core-rest-pipeline':
     specifier: file:./projects/perf-core-rest-pipeline.tgz
     version: file:projects/perf-core-rest-pipeline.tgz
+  '@rush-temp/perf-cosmos':
+    specifier: file:./projects/perf-cosmos.tgz
+    version: file:projects/perf-cosmos.tgz
   '@rush-temp/perf-data-tables':
     specifier: file:./projects/perf-data-tables.tgz
     version: file:projects/perf-data-tables.tgz
@@ -3306,7 +3309,7 @@ packages:
   /@types/fs-extra@9.0.13:
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
     dependencies:
-      '@types/node': 18.19.18
+      '@types/node': 20.10.8
     dev: false
 
   /@types/http-errors@2.0.4:
@@ -10643,7 +10646,7 @@ packages:
     dev: false
 
   file:projects/ai-document-intelligence.tgz:
-    resolution: {integrity: sha512-tGoqT0y5k5vi+y2ame3r8vwDhAf7K3sEjWy3Fl1ZdaYEqDQfiCwitpK0rAkfQN0vHnIsaI/GUqZz1VhC0Ft8uw==, tarball: file:projects/ai-document-intelligence.tgz}
+    resolution: {integrity: sha512-BzeiADIeoIIlJ8LRyX4rq6JouqAj7vz9S+/YE9KQXRP9URaP0ke8pY0Wzi4mOEW7dIrecN0ePd0TJqxrImmrdQ==, tarball: file:projects/ai-document-intelligence.tgz}
     name: '@rush-temp/ai-document-intelligence'
     version: 0.0.0
     dependencies:
@@ -12091,7 +12094,7 @@ packages:
     dev: false
 
   file:projects/arm-chaos.tgz:
-    resolution: {integrity: sha512-zrNAE3RSyAGLAAfq61x1nMKukyCKx0Xyinbzf6GJg/xSuLD4cs7H7JQCaENmiQ28GjsIDuPD7a8znkYdYoJlNw==, tarball: file:projects/arm-chaos.tgz}
+    resolution: {integrity: sha512-AYe2IRqlS5udUUwHLB+nBpfwEGN+g3f+4mU3aYzFq4VPJa0+sn4WyhR9uq1kH2ZM1N7mHyMOwqmbF16k95RXrA==, tarball: file:projects/arm-chaos.tgz}
     name: '@rush-temp/arm-chaos'
     version: 0.0.0
     dependencies:
@@ -20690,6 +20693,23 @@ packages:
       tslib: 2.6.2
       typescript: 5.3.3
       undici: 6.6.2
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - supports-color
+    dev: false
+
+  file:projects/perf-cosmos.tgz:
+    resolution: {integrity: sha512-GFagIDML3jHE7tqYEKk6BlNnXycMZ93tgQTiWc5lmhTNZ6jIOWPqm4hPtkeXVR53Azyu6kSNjZrOka5f5tGl8A==, tarball: file:projects/perf-cosmos.tgz}
+    name: '@rush-temp/perf-cosmos'
+    version: 0.0.0
+    dependencies:
+      '@types/node': 18.19.18
+      eslint: 8.57.0
+      rimraf: 3.0.2
+      ts-node: 10.9.2(@types/node@18.19.18)(typescript@5.3.3)
+      tslib: 2.6.2
+      typescript: 5.3.3
     transitivePeerDependencies:
       - '@swc/core'
       - '@swc/wasm'

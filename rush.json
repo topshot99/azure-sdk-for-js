@@ -2202,6 +2202,12 @@
       "packageName": "@azure/arm-springappdiscovery",
       "projectFolder": "sdk/springappdiscovery/arm-springappdiscovery",
       "versionPolicyName": "management"
+    },
+    {
+      "packageName": "@azure-tests/perf-cosmos",
+      "projectFolder": "sdk/cosmosdb/perf-tests/cosmos",
+      "versionPolicyName": "test"
     }
+
   ]
 }

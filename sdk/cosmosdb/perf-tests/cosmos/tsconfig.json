@@ -1,0 +1,24 @@
+{
+  "extends": "../../../../tsconfig.package",
+  "compilerOptions": {
+    "module": "commonjs",
+    "strict": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "outDir": "./dist-esm",
+    "preserveConstEnums": true,
+    "removeComments": false,
+    "target": "ES2017",
+    "newLine": "LF",
+    "resolveJsonModule": true,
+    "lib": ["es2019"],
+    "moduleResolution": "node",
+    "composite": true,
+    "stripInternal": true,
+    "paths": {
+      "@azure/cosmos": ["./src/index"]
+    }
+  },
+  "exclude": ["node_modules"]
+}
