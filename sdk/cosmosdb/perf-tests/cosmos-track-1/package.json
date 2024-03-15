@@ -1,5 +1,5 @@
 {
-  "name": "@azure-tests/perf-cosmos",
+  "name": "@azure-tests/perf-cosmos-track-1",
   "sdk-type": "perf-test",
   "version": "1.0.0",
   "description": "",
@@ -8,8 +8,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@azure/cosmos": "^4.0.0",
-    "@azure/test-utils-perf": "^1.0.0",
+    "@azure/cosmos": "3.17.3",
+    "@azure/test-utils-perf": "file:../../../test-utils/perf/azure-test-utils-perf-1.0.0.tgz",
     "dotenv": "^10.0.0"
   },
   "devDependencies": {
@@ -19,7 +19,6 @@
     "tslib": "^2.2.0",
     "ts-node": "^10.0.0",
     "typescript": "~5.3.3",
-    "@azure/dev-tool": "^1.0.0",
     "cross-env": "~7.0.3"
   },
   "private": true,
@@ -43,6 +42,8 @@
     "unit-test": "echo skipped",
     "test:browser": "echo skipped",
     "test:node": "echo skipped",
-    "test": "echo skipped"
+    "test": "echo skipped",
+    "setup": "node ../../../../common/tools/perf-tests-track-1-setup.js"
+
   }
 }
