@@ -16,10 +16,10 @@ export class ItemTest extends CosmosTest {
     await super.globalSetup(); // Calling base class' setup
     // Add any additional setup
     // Add one item to the container
-    const item = {
-      id: "item3",
-      key: "value"
-    };
+    // const item = {
+    //   id: "item3",
+    //   key: "value"
+    // };
     const perftestdb = getEnvVar("COSMOS_DATABASE");
     const perftestcontainer = getEnvVar("COSMOS_CONTAINER");
     await this.cosmosClient.databases.createIfNotExists({ id: perftestdb });
@@ -27,12 +27,12 @@ export class ItemTest extends CosmosTest {
 
     this.container = container.container; 
     
-    // read the item
-    const { resource: readItem } = await this.container.item(item.id).read();
-    // check if the item exists
-    if (readItem === undefined) {
-      await this.container.items.create(item); 
-    }
+    // // read the item
+    // const { resource: readItem } = await this.container.item(item.id).read();
+    // // check if the item exists
+    // if (readItem === undefined) {
+    //   await this.container.items.create(item); 
+    // }
      
   }
 
@@ -47,10 +47,10 @@ export class ItemTest extends CosmosTest {
 
   public async globalCleanup() {
     // delete the item
-    await this.container.item("item1").delete();
+    // await this.container.item("item1").delete();
     // delte the container
-    await this.container.delete();
-    await super.globalCleanup(); // Calling base class' cleanup
+    // await this.container.delete();
+    // await super.globalCleanup(); // Calling base class' cleanup
     // Add any additional cleanup
   }
 }
