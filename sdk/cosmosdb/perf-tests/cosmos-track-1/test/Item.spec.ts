@@ -1,4 +1,4 @@
-import { PerfOptionDictionary, drainStream, getEnvVar } from "@azure/test-utils-perf";
+import { PerfOptionDictionary, getEnvVar } from "@azure/test-utils-perf";
 import { CosmosTest } from "./cosmos.spec";
 
 export class ItemTest extends CosmosTest {
@@ -31,14 +31,11 @@ export class ItemTest extends CosmosTest {
 
   async run(): Promise<void> {
     // call the method on `serviceNameClient` that you're interested in testing
-    this.container.items.query("SELECT * from c").fetchAll().then((result: any) => {
-      drainStream(result.resources);
-
-    });
+    await this.container.items.query("SELECT * from c").fetchAll();
   }
 
   public async globalCleanup() {
-    await super.globalCleanup(); // Calling base class' cleanup
+    // await super.globalCleanup(); // Calling base class' cleanup
     // Add any additional cleanup
   }
 }
