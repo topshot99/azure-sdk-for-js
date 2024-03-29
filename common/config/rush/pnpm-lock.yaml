@@ -4099,6 +4099,12 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /async-mutex@0.5.0:
+    resolution: {integrity: sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==}
+    dependencies:
+      tslib: 2.6.2
+    dev: false
+
   /async@3.2.5:
     resolution: {integrity: sha512-baNZyqaaLhyLVKm/DlvdW051MSgO6b8eVfIezl9E5PqWxFgzLm/wQntEW4zOytVburDEr0JlALEpdOFwvErLsg==}
     dev: false
@@ -9865,8 +9871,8 @@ packages:
     hasBin: true
     dev: false
 
-  /typescript@5.4.2:
-    resolution: {integrity: sha512-+2/g0Fds1ERlP6JsakQQDXjZdZMM+rqpamFZJEKh4kwTIn3iDkgKtby0CeNd5ATNZ4Ry1ax15TMx0W2V+miizQ==}
+  /typescript@5.4.3:
+    resolution: {integrity: sha512-KrPd3PKaCLr78MalgiwJnA25Nm8HAmdwN3mYUYZgG/wizIo9EainNVQI9/yDavtVFRN2h3k8uf3GLHuhDMgEHg==}
     engines: {node: '>=14.17'}
     hasBin: true
     dev: false
@@ -18790,7 +18796,7 @@ packages:
     name: '@rush-temp/dev-tool'
     version: 0.0.0
     dependencies:
-      '@_ts/max': /typescript@5.4.2
+      '@_ts/max': /typescript@5.4.3
       '@_ts/min': /typescript@4.2.4
       '@microsoft/api-extractor': 7.41.0(@types/node@18.19.18)
       '@rollup/plugin-commonjs': 25.0.7(rollup@4.12.0)
@@ -20705,11 +20711,12 @@ packages:
     dev: false
 
   file:projects/perf-cosmos.tgz:
-    resolution: {integrity: sha512-I1kZWcnlcYEdW+EaBU2Jx8/lOi/1yzcbKiGOQICxatBK255XDhJK/U5r4X8q8SimxYydmlw0clraXp8LArpSHg==, tarball: file:projects/perf-cosmos.tgz}
+    resolution: {integrity: sha512-NH4n5aOhDNrw9dkckA8xY/tv1408JYVbBLVwNy5BoM+l6LQrTk5aJiPZviSbW6Qb0X4kXLb30DbwlTF+AcacCg==, tarball: file:projects/perf-cosmos.tgz}
     name: '@rush-temp/perf-cosmos'
     version: 0.0.0
     dependencies:
       '@types/node': 18.19.18
+      async-mutex: 0.5.0
       cross-env: 7.0.3
       dotenv: 10.0.0
       eslint: 8.57.0
