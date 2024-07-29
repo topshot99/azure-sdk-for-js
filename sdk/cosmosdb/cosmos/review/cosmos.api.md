@@ -2542,7 +2542,6 @@ export interface VectorEmbedding {
 
 // @public
 export enum VectorEmbeddingDataType {
-    Float16 = "float16",
     Float32 = "float32",
     Int8 = "int8",
     UInt8 = "uint8"
