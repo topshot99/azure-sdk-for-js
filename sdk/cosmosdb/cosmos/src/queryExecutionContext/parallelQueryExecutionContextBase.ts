@@ -33,6 +33,8 @@ import type {
   PartitionRangeUpdate,
   PartitionRangeUpdates,
 } from "../documents/ContinuationToken/PartitionRangeUpdate.js";
+import { convertToInternalPartitionKey } from "../documents/index.js";
+import { hashPartitionKey } from "../utils/hashing/hash.js";
 
 /** @hidden */
 export enum ParallelQueryExecutionContextBaseStates {
@@ -607,7 +609,22 @@ export abstract class ParallelQueryExecutionContextBase implements ExecutionCont
   }
 
   private async _onTargetPartitionRanges(): Promise<any[]> {
-    // invokes the callback when the target partition ranges are ready
+    // When partitionKey is specified in FeedOptions, scope the query to the target partition
+    if (this.options.partitionKey !== undefined) {
+      const partitionKeyDefinition =
+        this.clientContext.partitionKeyDefinitionCache[this.collectionLink];
+      if (partitionKeyDefinition) {
+        const internalPartitionKey = convertToInternalPartitionKey(this.options.partitionKey);
+        const epk = hashPartitionKey(internalPartitionKey, partitionKeyDefinition);
+        const epkRange = new QueryRange(epk, epk, true, true);
+        return this.routingProvider.getOverlappingRanges(
+          this.collectionLink,
+          [epkRange],
+          this.getDiagnosticNode(),
+        );
+      }
+    }
+    // Default: use query plan ranges
     const parsedRanges = this.partitionedQueryExecutionInfo.queryRanges;
     const queryRanges = parsedRanges.map((item) => QueryRange.parseFromDict(item));
     return this.routingProvider.getOverlappingRanges(

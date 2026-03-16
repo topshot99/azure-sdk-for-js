@@ -37,6 +37,9 @@ import { MetadataLookUpType } from "./CosmosDiagnostics.js";
 import { randomUUID } from "@azure/core-util";
 import { HybridQueryExecutionContext } from "./queryExecutionContext/hybridQueryExecutionContext.js";
 import type { PartitionKeyRangeCache } from "./routing/index.js";
+import { convertToInternalPartitionKey } from "./documents/index.js";
+import { hashPartitionKey } from "./utils/hashing/hash.js";
+import { isKeyInRange } from "./utils/batch.js";
 
 /**
  * Represents a QueryIterator Object, an implementation of feed or query response that enables
@@ -371,19 +374,35 @@ export class QueryIterator<T> {
     queryPlan: PartitionedQueryExecutionInfo,
     diagnosticNode?: DiagnosticNodeInternal,
   ): Promise<void> {
-    const allPartitionKeyRanges = (
+    let targetPartitionKeyRanges = (
       await this.partitionKeyRangeCache.onCollectionRoutingMap(this.resourceLink, diagnosticNode)
     ).getOrderedParitionKeyRanges();
 
-    // convert allPartitionKeyRanges to QueryRanges
-    const queryRanges: QueryRange[] = allPartitionKeyRanges.map((partitionKeyRange) => {
-      return {
-        min: partitionKeyRange.minInclusive,
-        max: partitionKeyRange.maxExclusive,
-        isMinInclusive: true,
-        isMaxInclusive: false,
-      };
-    });
+    // When partitionKey is specified in FeedOptions, filter to the target partition
+    if (this.options.partitionKey !== undefined) {
+      const partitionKeyDefinition =
+        this.clientContext.partitionKeyDefinitionCache[this.resourceLink];
+      if (partitionKeyDefinition) {
+        const internalPartitionKey = convertToInternalPartitionKey(this.options.partitionKey);
+        const epk = hashPartitionKey(internalPartitionKey, partitionKeyDefinition);
+        targetPartitionKeyRanges = targetPartitionKeyRanges.filter(
+          (range: { minInclusive: string; maxExclusive: string }) =>
+            isKeyInRange(range.minInclusive, range.maxExclusive, epk),
+        );
+      }
+    }
+
+    // convert targetPartitionKeyRanges to QueryRanges
+    const queryRanges: QueryRange[] = targetPartitionKeyRanges.map(
+      (partitionKeyRange: { minInclusive: string; maxExclusive: string }) => {
+        return {
+          min: partitionKeyRange.minInclusive,
+          max: partitionKeyRange.maxExclusive,
+          isMinInclusive: true,
+          isMaxInclusive: false,
+        };
+      },
+    );
 
     this.queryExecutionContext = new HybridQueryExecutionContext(
       this.clientContext,

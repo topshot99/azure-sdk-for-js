@@ -1004,4 +1004,131 @@ describe("parallelQueryExecutionContextBase", () => {
       });
     });
   });
+
+  describe("_onTargetPartitionRanges with partitionKey", () => {
+    it("should scope to single partition range when partitionKey is specified in options", async () => {
+      const options: FeedOptions = {
+        maxItemCount: 10,
+        maxDegreeOfParallelism: 3,
+        partitionKey: "Electronics",
+      };
+      const clientContext = createTestClientContext(cosmosClientOptions, diagnosticLevel);
+
+      // Set up partition key definition cache so the fix can look up the definition
+      (clientContext as any).partitionKeyDefinitionCache[collectionLink] = {
+        paths: ["/category"],
+        kind: "Hash",
+        version: 2,
+      };
+
+      // Three partition key ranges spanning the full key space
+      const mockPartitionKeyRange1 = createMockPartitionKeyRange("0", "", "05C1E399CD6732");
+      const mockPartitionKeyRange2 = createMockPartitionKeyRange(
+        "1",
+        "05C1E399CD6732",
+        "05C1E99CD67320",
+      );
+      const mockPartitionKeyRange3 = createMockPartitionKeyRange("2", "05C1E99CD67320", "FF");
+
+      const fetchAllInternalStub = vi.fn().mockResolvedValue({
+        resources: [mockPartitionKeyRange1, mockPartitionKeyRange2, mockPartitionKeyRange3],
+        headers: { "x-ms-request-charge": "1.23" },
+        code: 200,
+      });
+      vi.spyOn(clientContext, "queryPartitionKeyRanges").mockReturnValue({
+        fetchAllInternal: fetchAllInternalStub,
+      } as unknown as QueryIterator<PartitionKeyRange>);
+
+      const mockDocument = createMockDocument("sample-id-1", "Sample", "value");
+      vi.spyOn(clientContext, "queryFeed").mockResolvedValue({
+        result: [mockDocument] as unknown as Resource,
+        headers: { "x-ms-request-charge": "3.5" },
+        code: 200,
+      });
+
+      // Spy on getOverlappingRanges to verify it receives a point EPK range (not 3 query plan ranges)
+      const spy = vi.spyOn(SmartRoutingMapProvider.prototype, "getOverlappingRanges");
+
+      const context = new TestParallelQueryExecutionContext(
+        clientContext,
+        collectionLink,
+        query,
+        options,
+        partitionedQueryExecutionInfo,
+        correlatedActivityId,
+      );
+
+      await context["bufferDocumentProducers"](createDummyDiagnosticNode());
+
+      // The first call to getOverlappingRanges should receive a single point EPK range
+      expect(spy).toHaveBeenCalled();
+      const queryRanges = spy.mock.calls[0][1];
+      expect(queryRanges).toHaveLength(1);
+      // The EPK point range should have min === max (point query for a single partition key)
+      expect(queryRanges[0].min).toBe(queryRanges[0].max);
+
+      // Only 1 document producer should be created (scoped to single partition)
+      const totalProducers =
+        context["unfilledDocumentProducersQueue"].size() +
+        context["bufferedDocumentProducersQueue"].size();
+      expect(totalProducers).toBe(1);
+
+      spy.mockRestore();
+    });
+
+    it("should target all partition ranges when partitionKey is not specified", async () => {
+      const options: FeedOptions = { maxItemCount: 10, maxDegreeOfParallelism: 3 };
+      const clientContext = createTestClientContext(cosmosClientOptions, diagnosticLevel);
+
+      const mockPartitionKeyRange1 = createMockPartitionKeyRange("0", "", "05C1E399CD6732");
+      const mockPartitionKeyRange2 = createMockPartitionKeyRange(
+        "1",
+        "05C1E399CD6732",
+        "05C1E99CD67320",
+      );
+      const mockPartitionKeyRange3 = createMockPartitionKeyRange("2", "05C1E99CD67320", "FF");
+
+      const fetchAllInternalStub = vi.fn().mockResolvedValue({
+        resources: [mockPartitionKeyRange1, mockPartitionKeyRange2, mockPartitionKeyRange3],
+        headers: { "x-ms-request-charge": "1.23" },
+        code: 200,
+      });
+      vi.spyOn(clientContext, "queryPartitionKeyRanges").mockReturnValue({
+        fetchAllInternal: fetchAllInternalStub,
+      } as unknown as QueryIterator<PartitionKeyRange>);
+
+      const mockDocument = createMockDocument("sample-id-1", "Sample", "value");
+      vi.spyOn(clientContext, "queryFeed").mockResolvedValue({
+        result: [mockDocument] as unknown as Resource,
+        headers: { "x-ms-request-charge": "3.5" },
+        code: 200,
+      });
+
+      const spy = vi.spyOn(SmartRoutingMapProvider.prototype, "getOverlappingRanges");
+
+      const context = new TestParallelQueryExecutionContext(
+        clientContext,
+        collectionLink,
+        query,
+        options,
+        partitionedQueryExecutionInfo,
+        correlatedActivityId,
+      );
+
+      await context["bufferDocumentProducers"](createDummyDiagnosticNode());
+
+      // Without partitionKey, all 3 query plan ranges should be used
+      expect(spy).toHaveBeenCalled();
+      const queryRanges = spy.mock.calls[0][1];
+      expect(queryRanges).toHaveLength(3);
+
+      // All 3 document producers should be created
+      const totalProducers =
+        context["unfilledDocumentProducersQueue"].size() +
+        context["bufferedDocumentProducersQueue"].size();
+      expect(totalProducers).toBe(3);
+
+      spy.mockRestore();
+    });
+  });
 });
